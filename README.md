@@ -7,7 +7,7 @@ Um sistema robusto de gerenciamento de processos de ajuizamento bancário, desen
 
 ## Tecnologias Utilizadas
 
-- **Frontend:** HTML, Tailwind CSS & JavaScript
+- **Frontend:** HTML, Tailwind CSS, JavaScript
 - **Backend:** Google Apps Script (`.gs`) com arquitetura Servidor/Cliente
 - **Banco de Dados:** Google Sheets (Planilhas Google) como Data Store relacional
 
