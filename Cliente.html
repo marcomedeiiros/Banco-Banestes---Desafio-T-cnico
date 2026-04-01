@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <base target="_top">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: { sans: ['Inter', 'sans-serif'] },
+            colors: {
+              brand: { 50: '#f0f9ff', 100: '#e0f2fe', 500: '#0ea5e9', 600: '#0284c7', 700: '#0369a1' },
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      .fade-in { animation: fadeIn 0.3s ease-in; }
+      @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+      .blur-backdrop { backdrop-filter: blur(4px); }
+      .loader {
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #0284c7;
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<!-- 
+  ==============================================================
+  desafio tecnico Banestes - gestao de ajuizamento
+  tecnologias: Google Apps Script, Tailwind CSS, JavaScript Puro
+  ==============================================================
+-->
+<body class="bg-gray-50 text-gray-800 antialiased min-h-screen">
+    <nav class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <svg class="w-8 h-8 text-brand-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+                    <h1 class="text-xl font-bold text-gray-900 tracking-tight">Gestão de Ajuizamento</h1>
+                </div>
+            </div>
+        </div>
+    </nav>
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 md:py-8">
+        <div class="flex flex-col md:flex-row md:items-center justify-between mb-8">
+            <div>
+                <h2 class="text-3xl font-bold text-gray-900">Processos</h2>
+                <p class="mt-1 text-sm text-gray-500">Gerencie a viabilidade e acompanhamento de cobranças.</p>
+            </div>
+            <div class="mt-4 md:mt-0 flex flex-col sm:flex-row gap-2 sm:gap-3">
+                <button onclick="carregarDados()" class="w-full sm:w-auto justify-center inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                    Atualizar
+                </button>
+                <button onclick="abrirModal()" class="w-full sm:w-auto justify-center inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-brand-600 hover:bg-brand-700 transition-colors">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    Novo Processo
+                </button>
+            </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5 border-l-4 border-brand-500">
+                <p class="text-sm font-medium text-gray-500">Total de Processos</p>
+                <p class="mt-2 text-3xl font-bold text-gray-900" id="stat-total">-</p>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5 border-l-4 border-green-500">
+                <p class="text-sm font-medium text-gray-500">Com Garantia (Prioridade)</p>
+                <p class="mt-2 text-3xl font-bold text-gray-900" id="stat-prioridade">-</p>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5 border-l-4 border-yellow-500">
+                <p class="text-sm font-medium text-gray-500">Baixa Viabilidade (< R$ 15k)</p>
+                <p class="mt-2 text-3xl font-bold text-gray-900" id="stat-inviavel">-</p>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5 border-l-4 border-gray-500">
+                <p class="text-sm font-medium text-gray-500">Finalizados / Paralisados</p>
+                <p class="mt-2 text-3xl font-bold text-gray-900" id="stat-concluidos">-</p>
+            </div>
+        </div>
+        <div id="loading" class="flex flex-col items-center justify-center py-20">
+            <div class="loader mb-4"></div>
+            <p class="text-gray-500 font-medium">Buscando dados no Google Sheets...</p>
+        </div>
+        <div id="table-container" class="hidden bg-white shadow-sm border border-gray-200 rounded-xl overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Cliente | Produto | Unidade</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Valor da Dívida</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Viabilidade & Regras</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                            <th class="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-processos" class="bg-white divide-y divide-gray-200">
+                    </tbody>
+                </table>
+            </div>
+            <div id="empty-state" class="hidden text-center py-12">
+                <p class="mt-1 text-sm text-gray-500">Nenhum processo foi encontrado.</p>
+            </div>
+        </div>
+    </main>
+    <div id="modal-form" class="hidden fixed inset-0 z-10 overflow-y-auto">
+        <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 bg-gray-500 bg-opacity-75 blur-backdrop transition-opacity" onclick="fecharModal()"></div>
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
+            <div class="inline-block align-bottom bg-white rounded-xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg w-full fade-in">
+                <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4 border-b border-gray-100">
+                    <h3 class="text-xl leading-6 font-bold text-gray-900" id="modal-title">Novo Processo</h3>
+                </div>
+                
+                <form id="form-processo" onsubmit="salvarProcesso(event)">
+                    <div class="px-4 py-5 sm:p-6 space-y-4">
+                        <input type="hidden" id="form-row-index">
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Cliente</label>
+                            <select id="form-cliente" required class="mt-1 block w-full pl-3 pr-10 py-2.5 border-gray-300 focus:ring-brand-500 focus:border-brand-500 sm:text-sm rounded-lg border">
+                                <option value="">Selecione...</option>
+                            </select>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Unidade</label>
+                                <select id="form-unidade" required class="mt-1 block w-full pl-3 pr-10 py-2.5 border-gray-300 focus:ring-brand-500 focus:border-brand-500 sm:text-sm rounded-lg border">
+                                    <option value="">Selecione...</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Produto</label>
+                                <select id="form-produto" required class="mt-1 block w-full pl-3 pr-10 py-2.5 border-gray-300 focus:ring-brand-500 focus:border-brand-500 sm:text-sm rounded-lg border">
+                                    <option value="">Selecione...</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Valor da Dívida (R$)</label>
+                            <div class="mt-1 relative rounded-md shadow-sm">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <span class="text-gray-500 sm:text-sm">R$</span>
+                                </div>
+                                <input type="number" step="0.01" id="form-valor" required class="focus:ring-brand-500 focus:border-brand-500 block w-full pl-10 sm:text-sm border-gray-300 py-2.5 rounded-lg border">
+                            </div>
+                            <p id="aviso-viabilidade" class="hidden mt-1 text-xs text-red-500 font-medium">* Valor < R$ 15.000,00 - Inviável economicamente (baixa prioridade).</p>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Garantia Real</label>
+                                <select id="form-garantia" required class="mt-1 block w-full pl-3 pr-10 py-2.5 border-gray-300 focus:ring-brand-500 focus:border-brand-500 sm:text-sm rounded-lg border">
+                                    <option value="Não">Sem Garantia</option>
+                                    <option value="Carro">Carro</option>
+                                    <option value="Moto">Moto</option>
+                                    <option value="Imóvel">Imóvel</option>
+                                    <option value="Equipamento">Equipamento</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Status</label>
+                                <select id="form-status" required class="mt-1 block w-full pl-3 pr-10 py-2.5 border-gray-300 focus:ring-brand-500 focus:border-brand-500 sm:text-sm rounded-lg border">
+                                    <option value="Iniciado">Iniciado</option>
+                                    <option value="Analisando">Analisando</option>
+                                    <option value="Pendente">Pendente</option>
+                                    <option value="Paralisado">Paralisado</option>
+                                    <option value="Finalizado">Finalizado</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-gray-50 px-4 py-4 sm:px-6 sm:flex sm:flex-row-reverse rounded-b-xl gap-2 sm:gap-0">
+                        <button type="submit" id="btn-save" class="w-full sm:w-auto inline-flex justify-center rounded-lg border border-transparent shadow-sm px-4 py-2 bg-brand-600 text-base font-medium text-white hover:bg-brand-700 focus:outline-none sm:ml-3 sm:text-sm">Salvar</button>
+                        <button type="button" onclick="fecharModal()" class="w-full sm:w-auto inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none sm:text-sm">Cancelar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div id="modal-alert" class="hidden fixed inset-0 z-50 overflow-y-auto">
+        <div class="flex items-center justify-center min-h-screen p-4 text-center">
+            <div class="fixed inset-0 bg-gray-500 bg-opacity-75 blur-backdrop"></div>
+            <div class="inline-block bg-white rounded-lg px-4 pt-5 pb-4 text-left shadow-xl transform transition-all align-middle max-w-sm w-full fade-in z-50">
+                <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                    <h3 class="text-lg font-medium text-gray-900" id="alert-title"></h3>
+                    <div class="mt-2"><p class="text-sm text-gray-500" id="alert-message"></p></div>
+                </div>
+                <div class="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
+                    <button type="button" onclick="document.getElementById('modal-alert').classList.add('hidden')" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-brand-600 text-base font-medium text-white hover:bg-brand-700 sm:ml-3 sm:w-auto sm:text-sm">Ok</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        const formatMoney = (val) => parseFloat(val).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        
+        /**
+         * inicializa a estrutura de cache do dashboard
+         */
+        let currentState = { processos: [], clientes: [], unidades: [], produtos: [] };
+
+        /**
+         * exibe o modal generico de alerta para avisos e erros
+         * @param {string} title titulo a exibir
+         * @param {string} message mensagem corporativa
+         */
+        const showAlert = (title, message) => {
+            document.getElementById('alert-title').innerText = title;
+            document.getElementById('alert-message').innerText = message;
+            document.getElementById('modal-alert').classList.remove('hidden');
+        };
+
+        /**
+         * dispara a requisicao de load inicial para o backend servidor.gs
+         */
+        const carregarDados = () => {
+            document.getElementById('loading').classList.remove('hidden');
+            document.getElementById('table-container').classList.add('hidden');
+            
+            google.script.run
+                .withSuccessHandler(renderDashboard)
+                .withFailureHandler(err => {
+                    showAlert('Erro', 'Falha ao conectar no backend. ' + err);
+                    document.getElementById('loading').classList.add('hidden');
+                })
+                .getInitialData();
+        };
+
+        /**
+         * renderiza a tabela de processos e as estatisticas com base no retorno do backend
+         * @param {Object} response dados processados entregues pelo backend
+         */
+        const renderDashboard = (response) => {
+            document.getElementById('loading').classList.add('hidden');
+            if(!response.success) return showAlert('Erro de Leitura', response.error);
+
+            currentState = response;
+            atualizarSelects();
+
+            const pList = response.processos || [];
+            document.getElementById('stat-total').innerText = pList.length;
+            document.getElementById('stat-prioridade').innerText = pList.filter(p => p.prioridade_alta).length;
+            document.getElementById('stat-inviavel').innerText = pList.filter(p => !p.viabilidade_financeira).length;
+            document.getElementById('stat-concluidos').innerText = pList.filter(p => ['Finalizado', 'Paralisado'].includes(p.status)).length;
+
+            const tbody = document.getElementById('tbody-processos');
+            tbody.innerHTML = '';
+
+            if(pList.length === 0) {
+                document.getElementById('table-container').classList.remove('hidden');
+                document.getElementById('empty-state').classList.remove('hidden');
+                return;
+            }
+
+            document.getElementById('table-container').classList.remove('hidden', 'opacity-50', 'pointer-events-none');
+            document.getElementById('empty-state').classList.add('hidden');
+
+            // salva os processos 
+            window.processosData = pList;
+
+            pList.forEach((proc, index) => {
+                const badgeStatusCor = proc.status === 'Finalizado' ? 'bg-green-100 text-green-800' : 
+                                       proc.status === 'Paralisado' ? 'bg-gray-100 text-gray-800' : 'bg-brand-100 text-brand-800';
+                
+                let rulesBadge = '';
+                if(proc.prioridade_alta) {
+                    rulesBadge += `<span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800 block mb-1">Garantia: ${proc.garantia_real}</span>`;
+                }
+                if(!proc.viabilidade_financeira) {
+                    rulesBadge += `<span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-800 block">⚠️ Baixa Viabilidade</span>`;
+                }
+                if(proc.viabilidade_financeira && !proc.prioridade_alta) {
+                    rulesBadge += `<span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-yellow-100 text-yellow-800 block mb-1">Sem Garantia Real</span>`;
+                }
+                
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="px-6 py-4">
+                        <div class="text-sm font-bold text-gray-900 whitespace-normal break-words max-w-xs sm:max-w-sm md:max-w-md">${proc.cliente_nome}</div>
+                        <div class="text-xs text-brand-600 font-mono mb-1">#${proc.id}</div>
+                        <div class="text-xs text-gray-500 whitespace-normal break-words max-w-xs sm:max-w-sm md:max-w-md">${proc.produto_nome} • ${proc.unidade_nome}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-semibold">
+                        ${formatMoney(proc.valor_divida)}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        ${rulesBadge}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${badgeStatusCor}">${proc.status}</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                        <button onclick="editarProcesso(window.processosData[${index}])" class="text-brand-600 hover:text-brand-900">Editar</button>
+                        <button onclick="excluirProcesso(${proc.row_index})" class="text-red-600 hover:text-red-900">Excluir</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        };
+
+        const atualizarSelects = () => {
+            const preencher = (id, lista, textCampo1, textCampo2) => {
+                const sel = document.getElementById(id);
+                sel.innerHTML = '<option value="">Selecione...</option>';
+                lista.forEach(item => {
+                    const val = item['ID'] || item['id'];
+                    const text = item[textCampo1] || item[textCampo2] || item['Nome'] || val;
+                    if (val) sel.innerHTML += `<option value="${val}">${text}</option>`;
+                });
+            };
+            preencher('form-cliente', currentState.clientes, 'Nome', 'Nome do Cliente'); 
+            preencher('form-unidade', currentState.unidades, 'Nome', 'Nome da Unidade');
+            preencher('form-produto', currentState.produtos, 'Nome', 'Nome do Produto');
+        };
+
+        document.getElementById('form-valor').addEventListener('input', function(e) {
+            const v = parseFloat(e.target.value);
+            const alertElem = document.getElementById('aviso-viabilidade');
+            if (v && v < 15000) {
+                alertElem.classList.remove('hidden');
+                e.target.classList.add('border-red-300', 'focus:border-red-500', 'focus:ring-red-500');
+            } else {
+                alertElem.classList.add('hidden');
+                e.target.classList.remove('border-red-300', 'focus:border-red-500', 'focus:ring-red-500');
+            }
+        });
+
+        const abrirModal = () => {
+            document.getElementById('form-processo').reset();
+            document.getElementById('form-row-index').value = '';
+            document.getElementById('modal-title').innerText = 'Novo Processo';
+            document.getElementById('modal-form').classList.remove('hidden');
+            document.getElementById('aviso-viabilidade').classList.add('hidden');
+        };
+
+        const fecharModal = () => document.getElementById('modal-form').classList.add('hidden');
+
+        /**
+         * popula o formulário do modal com os dados do Processo selecionado para edição.
+         * @param {Object} proc Ojeto do processo selecionado
+         */
+        const editarProcesso = (proc) => {
+            document.getElementById('form-row-index').value = proc.row_index;
+            document.getElementById('form-cliente').value = proc.cliente_id;
+            document.getElementById('form-unidade').value = proc.unidade_id;
+            document.getElementById('form-produto').value = proc.produto_id;
+            document.getElementById('form-valor').value = proc.valor_divida;
+            document.getElementById('form-garantia').value = proc.garantia_real;
+            document.getElementById('form-status').value = proc.status;
+            
+            // força a validação visual da regra de negocios de valor inviavel
+            document.getElementById('form-valor').dispatchEvent(new Event('input'));
+            
+            document.getElementById('modal-title').innerText = 'Editar Processo';
+            document.getElementById('modal-form').classList.remove('hidden');
+        };
+
+        /**
+         * dispara a submissão de gravação/atualização (CRUD: Append / Update).
+         * @param {Event} e Evento de click nativo do form
+         */
+        const salvarProcesso = (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btn-save');
+            btn.innerHTML = '<span class="loader w-4 h-4 border-2 border-white border-t-transparent inline-block mr-2"></span>...';
+            btn.disabled = true;
+
+            const dados = {
+                row_index: document.getElementById('form-row-index').value,
+                cliente_id: document.getElementById('form-cliente').value,
+                unidade_id: document.getElementById('form-unidade').value,
+                produto_id: document.getElementById('form-produto').value,
+                valor_divida: document.getElementById('form-valor').value,
+                garantia_real: document.getElementById('form-garantia').value,
+                status: document.getElementById('form-status').value,
+            };
+
+            google.script.run
+                .withSuccessHandler(res => {
+                    fecharModal();
+                    if(res.success) carregarDados(); else showAlert('Erro', res.error);
+                    btn.innerHTML = 'Salvar'; btn.disabled = false;
+                })
+                .withFailureHandler(err => {
+                    fecharModal(); showAlert('Erro', err);
+                    btn.innerHTML = 'Salvar'; btn.disabled = false;
+                })
+                .salvarProcesso(dados);
+        };
+
+        const excluirProcesso = (rowIndex) => {
+            if(confirm('Tem certeza que deseja excluir permanentemente este processo?')) {
+                document.getElementById('table-container').classList.add('opacity-50', 'pointer-events-none');
+                google.script.run
+                    .withSuccessHandler(res => { 
+                        if(res.success) carregarDados(); 
+                        else {
+                           document.getElementById('table-container').classList.remove('opacity-50', 'pointer-events-none');
+                           showAlert('Erro', res.error); 
+                        }
+                    })
+                    .withFailureHandler(err => {
+                        document.getElementById('table-container').classList.remove('opacity-50', 'pointer-events-none');
+                        showAlert('Erro Fatal', 'Falha ao excluir: ' + err);
+                    })
+                    .excluirProcesso(rowIndex);
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', carregarDados);
+    </script>
+</body>
+</html>
