@@ -1,7 +1,6 @@
-# Sistema Simplificado de Acompanhamento de Processos (SAP) - Banestes
 
-![Status](https://img.shields.io/badge/Status-Conclu%C3%ADdo-success)
-![Tecnologias](https://img.shields.io/badge/Stack-Google_Apps_Script_%7C_Tailwind_CSS-blue)
+https://github.com/user-attachments/assets/723e3c71-525d-41fc-b03f-edd3052ce7d1
+# Sistema Simplificado de Acompanhamento de Processos (SAP) - Banestes
 
 Um sistema robusto de gerenciamento de processos de ajuizamento bancário, desenvolvido como parte do Desafio Técnico do Banco Banestes. Este projeto avalia a viabilidade financeira e estabelece a prioridade de ações de recuperação de crédito antes de iniciar processos judiciais, reduzindo custos operacionais.
 
@@ -34,3 +33,6 @@ Um sistema robusto de gerenciamento de processos de ajuizamento bancário, desen
 
 ---
 Desenvolvido com dedicação e atenção aos detalhes técnicos, focando na excelência da Interface do Usuário (UI/UX) e código limpo bem documentado.
+
+
+Uploading trabalho.mp4…
